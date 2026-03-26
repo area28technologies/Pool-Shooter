@@ -8,7 +8,7 @@ jobs:
     secrets: inherit
     with:
       env: prod
-      buildName: BubbleShooter
+      buildName: pool-shooter
       s3Bucket: lt-deploy-production
       s3BucketStaging: lt-deploy-staging
       cache-key: E3HH1LQMPKBMNM

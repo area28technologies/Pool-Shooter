@@ -10,9 +10,9 @@ namespace DTT.BubbleShooter
     public class ScoreDisplayControllerRefactor : MonoBehaviour
     {
         [Header("Child Component")]
-        [SerializeField] Text _scoreText;
-        [SerializeField] Text _coinText;
-        [SerializeField] Text _timeText;
+        [SerializeField] TextMeshProUGUI _scoreText;
+        [SerializeField] TextMeshProUGUI _coinText;
+        [SerializeField] TextMeshProUGUI _timeText;
 
         private int _currentScore = 0;
         private DateTime _startTime;

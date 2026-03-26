@@ -12,7 +12,7 @@ jobs:
     secrets: inherit
     with:
       env: staging
-      buildName: BubbleShooter
+      buildName: pool-shooter
       slack_channel: 'C08JMPC4B4H'
   deploy-staging:
     needs: [build-staging]
@@ -20,7 +20,7 @@ jobs:
     secrets: inherit
     with:
       env: staging
-      buildName: BubbleShooter
+      buildName: pool-shooter
       s3Bucket: lt-deploy-staging
       cache-key: EU5F5KVB1QQFT
       slack_channel: 'C08JMPC4B4H'
