@@ -1,0 +1,27 @@
+
+vong.png
+size: 1006,1006
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+Layer 1
+  rotate: false
+  xy: 2, 729
+  size: 276, 275
+  orig: 281, 282
+  offset: 3, 4
+  index: -1
+vong2_0
+  rotate: true
+  xy: 280, 700
+  size: 304, 335
+  orig: 521, 521
+  offset: 86, 96
+  index: -1
+vong_0
+  rotate: true
+  xy: 617, 640
+  size: 364, 387
+  orig: 521, 521
+  offset: 60, 68
+  index: -1

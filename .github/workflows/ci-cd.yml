@@ -1,0 +1,26 @@
+name: WebGL Build Actions 😎
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'CHANGELOG.md'
+      - '.release-please-manifest.json'
+jobs:
+  build-staging:
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      env: staging
+      buildName: BubbleShooter
+      slack_channel: 'C08JMPC4B4H'
+  deploy-staging:
+    needs: [build-staging]
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit
+    with:
+      env: staging
+      buildName: BubbleShooter
+      s3Bucket: lt-deploy-staging
+      cache-key: EU5F5KVB1QQFT
+      slack_channel: 'C08JMPC4B4H'

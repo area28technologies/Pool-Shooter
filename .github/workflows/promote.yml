@@ -1,0 +1,103 @@
+name: Promote Build 🚀
+on:
+  workflow_call:
+    inputs:
+      env:
+        required: true
+        type: string
+      buildName:
+        required: true
+        type: string
+      s3Bucket:
+        required: true
+        type: string
+      s3BucketStaging:
+        required: true
+        type: string
+      cache-key:
+        required: true
+        type: string
+      slack_channel:
+        required: true
+        type: string
+      deployment_type:
+        required: true
+        type: string
+        default: 'release'
+      manual_commit:
+        required: false
+        type: string
+
+permissions:
+    id-token: write
+    contents: read
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+            audience: sts.amazonaws.com
+            aws-region: ap-southeast-1
+            role-to-assume: arn:aws:iam::920373033982:role/oidc-staging-github-actions-role
+
+      - name: Get Deployment Version
+        run: |
+          if [ -n "${{ inputs.manual_commit }}" ]; then
+            echo "DEPLOY_COMMIT=${{ inputs.manual_commit }}" >> $GITHUB_ENV
+          else
+            # Download deployment version file from staging
+            aws s3 cp s3://${{ inputs.s3BucketStaging }}/archive/${{ inputs.buildName }}/deploymentVersion.json deploymentVersion.json
+            
+            if [ "${{ inputs.deployment_type }}" = "release" ]; then
+              # Get current deployment commit for release
+              DEPLOY_COMMIT=$(jq -r '.environments.staging.currentDeployment.commit' deploymentVersion.json)
+            else
+              # Get previous deployment commit for rollback
+              DEPLOY_COMMIT=$(jq -r '.environments.staging.previousDeployment.commit' deploymentVersion.json)
+            fi
+            
+            if [ -z "$DEPLOY_COMMIT" ]; then
+              echo "Error: No deployment commit found"
+              exit 1
+            fi
+            
+            echo "DEPLOY_COMMIT=$DEPLOY_COMMIT" >> $GITHUB_ENV
+          fi
+
+      - name: Sync to S3
+        run: |
+          aws s3 cp s3://${{ inputs.s3BucketStaging }}/archive/${{ inputs.buildName }}/${{ env.DEPLOY_COMMIT }}/ build/ --recursive
+
+          aws s3 sync --delete --exclude "*.br" build s3://${{ inputs.s3Bucket }}/${{ inputs.buildName }}
+
+          aws s3 sync --delete --include "*.br" build s3://${{ inputs.s3Bucket }}/${{ inputs.buildName }} \
+            --metadata-directive REPLACE \
+            --content-encoding br
+
+          # Copy the config file
+          aws s3 cp s3://${{ inputs.s3BucketStaging }}/config/${{ inputs.env }}/beConfig.json s3://${{ inputs.s3Bucket }}/${{ inputs.buildName }}/StreamingAssets/beConfig.json
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation --distribution-id ${{ inputs.cache-key }} --paths "/${{ inputs.buildName }}/*"
+
+      - name: Send Slack Notification
+        if: always()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+            channel-id: ${{ inputs.slack_channel }}
+            slack-message: |
+                *Service Deployment Status*: ${{ job.status == 'success' && '✅ Success' || '❌ Failure' }}
+                *Service*: ${{ inputs.buildName }}
+                *Environment*: ${{ inputs.env }}
+                *Commit*: ${{ env.DEPLOY_COMMIT }}
+                *Tag*: ${{ github.ref_name }}
+                *Game URL*: https://games.lt.a28.io/${{ inputs.buildName }}/index.html
+        env:
+            SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}

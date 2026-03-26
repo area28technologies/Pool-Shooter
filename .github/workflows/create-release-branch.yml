@@ -1,0 +1,38 @@
+on:
+  release:
+    types:
+      - released
+
+env:
+  VERSION: ${{ github.event.release.tag_name }}
+
+permissions:
+  contents: write
+
+jobs:
+  create-release-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Determine release branch
+        id: get-release-branch
+        run: |
+          RELEASE_BRANCH="release-${VERSION%.*}.x"
+          echo "release-branch=$RELEASE_BRANCH" >> $GITHUB_OUTPUT
+      - name: Check if release branch exists
+        id: check-branch-exists
+        run: |
+          if [[ -n $(git ls-remote --heads origin ${{ steps.get-release-branch.outputs.release-branch }}) ]]; then
+              echo "exists=true" >> $GITHUB_OUTPUT
+          else
+              echo "exists=false" >> $GITHUB_OUTPUT          
+          fi
+        shell: bash
+      - name: Create release branch if absent
+        if: ${{ steps.check-branch-exists.outputs.exists == 'false' }}
+        run: |
+          echo ${{ steps.get-release-branch.outputs.release-branch }}
+          git checkout -b ${{ steps.get-release-branch.outputs.release-branch }} $VERSION
+          git push --set-upstream origin ${{ steps.get-release-branch.outputs.release-branch }}
+
+

@@ -1,0 +1,8 @@
+# This file defines ownership for different parts of the codebase
+# Order is important; the last matching pattern takes the most precedence
+
+# Devops team owns the .github directory
+/.github/ @area28technologies/lt-a28-devops
+
+# All other files are owned by the A28 development team
+* @area28technologies/lt-a28-dev 

@@ -1,0 +1,77 @@
+name: Build WebGl
+
+on:
+  workflow_call:
+    inputs:
+      env:
+        required: true
+        type: string
+      buildName:
+        required: true
+        type: string
+      slack_channel:
+        required: true
+        type: string
+        
+
+jobs:
+  webgl-build: # Not saving output in Pull Request Build.
+    name: WebGL Build
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      # Cache
+      - uses: actions/cache@v3
+        with:
+          path: Library
+          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-
+
+      - name: Inject PAT into UPM URL
+        run: |
+          jq '.dependencies["com.a28.platform-sdk"] |= 
+              "https://${{ secrets.MY_RELEASE_PLEASE_TOKEN }}@github.com/area28technologies/A28-platform-sdk.git#main"' \
+              BubbleShooterEasterBunny/Packages/manifest.json > tmp.json && mv tmp.json BubbleShooterEasterBunny/Packages/manifest.json
+            
+      # Build
+      - name: Build project
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+          UNITY_EMAIL: ${{ secrets.UNITY_USERNAME }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: WebGL
+          customImage: "unityci/editor:ubuntu-2022.3.20f1-webgl-3.1"
+          buildName: ${{ inputs.buildName }}
+          projectPath: BubbleShooterEasterBunny
+          allowDirtyBuild: true
+
+      - name: Send Slack Notification on Failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          channel-id: ${{ inputs.slack_channel }}
+          slack-message: |
+            ❌ *Build Failed*
+            *Service*: ${{ inputs.buildName }}
+            *Environment*: ${{ inputs.env }}
+            *Commit*: ${{ github.sha }}
+            *Build Logs*: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      # Return License
+      - name: Return license
+        uses: game-ci/unity-return-license@v2
+        if: always()
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.buildName }}
+          path: build/WebGL
+          retention-days: 1

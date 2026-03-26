@@ -1,0 +1,571 @@
+using System;
+using DTT.MinigameBase;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading.Tasks;
+using UnityEngine;
+using Debug = UnityEngine.Debug;
+using Random = UnityEngine.Random;
+
+namespace DTT.BubbleShooter
+{
+    /// <summary>
+    /// This class acts as the entry point for the Bubble Shooter minigame.
+    /// </summary>
+    public class BubbleShooterManager : MonoBehaviour, IMinigame<BubbleShooterConfig, BubbleShooterResult>
+    {
+        
+        [SerializeField] private Animation alertLineAnim;
+
+        /// <summary>
+        /// The Config property is a reference to the configuration passed through the inspector.
+        /// </summary>
+        public BubbleShooterConfig Config { get; private set; }
+
+        /// <summary>
+        /// The Grid property is the <see cref="HexagonGrid"/> instance that bubbles are placed on.
+        /// </summary>
+        public HexagonGrid Grid { get; private set; }
+
+        /// <summary>
+        /// The Pool property is referencing to an instance of a <see cref="BubblePool"/> that holds possible
+        /// answers for popping bubbles.
+        /// </summary>
+        public BubblePool Pool { get; private set; }
+
+        /// <summary>
+        /// The Turret property is the <see cref="BubbleShooter.Turret"/> instance that is responsible for shooting bubbles.
+        /// </summary>
+        public Turret Turret { get; private set; }
+
+        /// <summary>
+        /// The _timer field is an instance of a stopwatch that keeps track of the time taken.
+        /// </summary>
+        private readonly Stopwatch _timer = new Stopwatch();
+
+        /// <summary>
+        /// The _isPaused field indicates whether the game has been paused or not.
+        /// </summary>
+        private bool _isPaused;
+
+        /// <summary>
+        /// The _isGameActive field indicates whether the game is currently active or not.
+        /// </summary>
+        private bool _isGameActive;
+
+        /// <summary>
+        /// The _initialTimeScale field is used to revert back to the normal time scale when resuming the game.
+        /// </summary>
+        private float _initialTimeScale;
+
+        /// <summary>
+        /// Score of the game.
+        /// </summary>
+        private int _score = 0;
+
+        /// <summary>
+        /// The TimeElapsed property is the time the bubble shooter game has been running for in seconds.
+        /// </summary>
+        public float TimeElapsed => _timer.ElapsedMilliseconds / 1000f;
+
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public bool IsPaused => _isPaused;
+
+        /// <summary>
+        /// Score of the game.
+        /// </summary>
+        public int Score => _score;
+
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public bool IsGameActive => _isGameActive;
+
+        /// <summary>
+        /// The Finish event is fired when the game is won and gives a result.
+        /// </summary>
+        public event System.Action<BubbleShooterResult> Finish;
+
+        /// <summary>
+        /// The Fail event is fired when the game is failed and gives a result.
+        /// </summary>
+        public event System.Action<BubbleShooterResult> Fail;
+
+        /// <summary>
+        /// The Initialized event is fired when the game's objects are initialized.
+        /// This is called before <see cref="Started"/>.
+        /// </summary>
+        public event System.Action Initialized;
+
+        /// <summary>
+        /// The Started event is fired when the game is started.
+        /// This is called after <see cref="Initialized"/>.
+        /// </summary>
+        public event System.Action Started;
+
+        /// <summary>
+        /// The Paused event is fired when the game is being paused.
+        /// </summary>
+        public event System.Action Paused;
+
+        /// <summary>
+        /// The Continued event is fired when the game is being unpaused.
+        /// </summary>
+        public event System.Action Continued;
+
+        public System.Action<int> OnChangeRowGenerationCodition;
+
+        private float timeCountWhenShot;
+
+        [SerializeField]
+        private float m_timeWithNoNewShot;
+        [SerializeField]
+        private float m_missedShotsTillNewRow;
+        [SerializeField]
+        private float m_shotsTillNewRow;
+
+        public List<Bubble> bubblesSwap = new List<Bubble>();
+        
+        //[SerializeField] private AudioSource soundSource;
+        [SerializeField] private List<AudioClip> shotAudioClip;
+        [SerializeField] private List<AudioClip> mergeAudioClip;
+        [SerializeField] private List<AudioClip> cancleAudioClip;
+        [SerializeField] private List<AudioClip> finishAudioClip;
+        [SerializeField] private List<AudioClip> warningAudioClip;
+        [SerializeField] private List<AudioClip> swapAudioClip;
+
+      
+
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public void Continue()
+        {
+            if (!_isGameActive)
+                return;
+
+            _isPaused = false;
+            _timer.Start();
+
+            Turret.canShoot = true;
+
+            Time.timeScale = _initialTimeScale;
+
+            Continued?.Invoke();
+        }
+
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public void ForceFinish()
+        {
+            if (!IsGameActive)
+                return;
+
+            _isGameActive = false;
+            _isPaused = false;
+            _timer.Stop();
+            timeCountWhenShot = -1;
+
+            Turret.canShoot = false;
+
+            float timeElapsed = TimeElapsed;
+            int shotsFired = Turret.i_Shots;
+            int amountOfMissedPops = Turret.i_totalMissedShots;
+            bool hasWon = Grid.Height == 0;
+
+            BubbleShooterResult results = new BubbleShooterResult(
+                timeElapsed,
+                shotsFired,
+                amountOfMissedPops,
+                hasWon,
+                Score);
+
+            alertLineAnim.gameObject.GetComponent<AudioSource>().Stop();
+
+            if (!RCGSoundSetting.Instance.IsSoundMuted)
+            {
+                RCGSoundSetting.Instance.PlaySFX(finishAudioClip);
+            }
+
+            StartCoroutine(ForceFinishCoroutine(results, hasWon));
+           
+            //if (hasWon)
+            //{
+            //    Finish?.Invoke(results);
+            //}
+            //else
+            //{
+            //    Fail?.Invoke(results);
+            //}
+        }
+
+        private IEnumerator ForceFinishCoroutine(BubbleShooterResult results, bool hasWon)
+        {
+            yield return new WaitForSeconds(2);
+
+            if (hasWon)
+            {
+                Finish?.Invoke(results);
+            }
+            else
+            {
+                Fail?.Invoke(results);
+            }
+        } 
+
+        public void Stop()
+        {
+            _isGameActive = false;
+            _isPaused = false;
+            _timer.Stop();
+
+            Time.timeScale = _initialTimeScale;
+
+            Turret.canShoot = false;
+
+            Turret.Reload(null);
+            Grid.Clear();
+        }
+
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
+        public void Pause()
+        {
+            if (!_isGameActive)
+                return;
+
+            _isPaused = true;
+            _timer.Stop();
+
+            Turret.canShoot = false;
+
+            _initialTimeScale = Time.timeScale;
+            Time.timeScale = 0f;
+
+            Paused?.Invoke();
+        }
+
+        /// <summary>
+        /// <inheritdoc>/>
+        /// </summary>
+        /// <param name="config">The configuration file to start the game.</param>
+        public void StartGame(BubbleShooterConfig config)
+        {
+			throw new NotImplementedException();
+            if (IsGameActive)
+                return;
+
+            Config = config;
+
+            _score = 0;
+            _isPaused = false;
+            _isGameActive = true;
+            _timer.Start();
+
+            _initialTimeScale = Time.timeScale;
+
+            InitializeGame();
+            //APIController.Instance.ImplementPostStartRound();
+            Started?.Invoke();
+        }
+
+        /// <summary>
+        /// The Restart method restarts the currently running game to its initial starting state.
+        /// </summary>
+        public void Restart()
+        {
+            _isGameActive = true;
+            _isPaused = false;
+            _timer.Restart();
+
+            Time.timeScale = _initialTimeScale;
+
+            InitializeGame();
+
+            Started?.Invoke();
+        }
+
+        /// <summary>
+        /// The InitializeGame method sets up necessary objects and event listeners.
+        /// </summary>
+        private void InitializeGame()
+        {
+            System.Func<Bubble> generateBubbleDelegate = () =>
+            {
+                Color randomBubbleColor = GetColor();
+
+                if (Config.UseEducativeElement)
+                    return new NumberedBubble(randomBubbleColor, Random.Range(Config.MinimumBubbleNumber, Config.MaximumBubbleNumber));
+                else
+                    return new ColoredBubble(randomBubbleColor);
+            };
+            Grid = new HexagonGrid(Config.GridWidth, Config.GridHeightThreshold, Config.RelativityMode, generateBubbleDelegate);
+
+            Turret = new Turret();
+            Grid.Attached += HandleBubbleAttachment;
+            Grid.Updated += (cells, mode, animated, playEffect) => CheckIfEndGame();
+            Grid.Updated += (cells, mode, animated, playEffect) => CheckIfAlert();
+
+            OnChangeRowGenerationCodition += ChangeRowGenerationCondition;
+
+            float chanceToPopThreshold = Config.ChanceToPopThreshold;
+            if (Config.UseEducativeElement)
+                Pool = new NumberedBubblePool(Grid, chanceToPopThreshold);
+            else
+                Pool = new ColoredBubblePool(Grid, chanceToPopThreshold);
+
+            Initialized?.Invoke();
+
+            for (int y = 0; y < Config.InitialGridHeight; y++)
+                Grid.Populate(y + 1);
+
+            Pool.Recompute();
+            //Turret.Reload(Pool.PickBubble());
+            Turret.Reload(GetReloadColorBubble());
+
+            m_timeWithNoNewShot = Config.TimeWithNoNewShot[0];
+            m_missedShotsTillNewRow = Config.MissedShotsTillNewRow[0];
+            m_shotsTillNewRow = Config.ShotsTillNewRow[0];
+        }
+
+        /// <summary>
+        /// Choose a color for the bubble in the bubble pool.
+        /// </summary>
+        /// <returns>Return the color.</returns>
+        private Color GetColor()
+        {
+            int totalValue = 0;
+            int runningValue = 0;
+            foreach (var weight in Config.ColorConfiguration)
+                totalValue += weight.Weight;
+            // if no weight are set up.
+            if (totalValue == 0)
+                return Config.ColorConfiguration[Random.Range(0, Config.ColorConfiguration.Length)].BubbleColors;
+
+            // if weight are set up.
+            int hitValue = Random.Range(1, totalValue + 1);
+            for (int i = 0; i < Config.ColorConfiguration.Length; i++)
+            {
+                runningValue += Config.ColorConfiguration[i].Weight;
+                if (hitValue < runningValue)
+                    return Config.ColorConfiguration[i].BubbleColors;
+            }
+
+            return Config.ColorConfiguration[Random.Range(0, Config.ColorConfiguration.Length)].BubbleColors;
+        }
+
+        private Bubble GetNewBubbleColor()
+        {
+            Color randomBubbleColor = GetColor();
+            Bubble bubble = new ColoredBubble(randomBubbleColor);
+
+            return bubble;
+        }
+
+        private List<Bubble> GetReloadColorBubble(bool isSwap = false)
+        {
+            while (bubblesSwap.Count < 2)
+            {
+                bubblesSwap.Add(GetNewBubbleColor());
+            }
+
+            if (bubblesSwap.Count > 2)
+            {
+                UnityEngine.Debug.Log(bubblesSwap.Count);
+            }
+
+            if (isSwap)
+            {
+                Bubble temp = bubblesSwap[0];
+                bubblesSwap[0] = bubblesSwap[1];
+                bubblesSwap[1] = temp;
+            }
+            else
+            {
+                Bubble temp = bubblesSwap[0];
+                bubblesSwap[0] = bubblesSwap[1];
+                bubblesSwap[1] = temp;
+
+                bubblesSwap[1] = GetNewBubbleColor();
+            }
+
+            return bubblesSwap;
+        }
+
+        /// <summary>
+        /// The ShootTurret method notifies the <see cref="Turret"/> to shoot a bubble.
+        /// </summary>
+        /// <param name="direction">The direction to shoot the bubble at.</param>
+        public void ShootTurret(Vector2 direction)
+        {
+			throw new NotImplementedException();
+            if (!IsGameActive)
+                return;
+
+            if (!Turret.canShoot)
+                return;
+            
+            if (!CancelShootArea.isCanShoot)
+            {
+                if (!RCGSoundSetting.Instance.IsSoundMuted)
+                {
+                    RCGSoundSetting.Instance.PlaySFX(cancleAudioClip);
+                }
+                return;
+            }
+
+            //if (APIController.Instance.gameMode == GameModePlatform.mode_leaderboard)
+            {
+                //LogManager.AddLog(Score);
+            }
+
+            if (!RCGSoundSetting.Instance.IsSoundMuted)
+            {
+                RCGSoundSetting.Instance.PlaySFX(shotAudioClip);
+            }
+
+            Turret.Shoot(direction);
+        }
+
+        /// <summary>
+        /// The HandleBubbleAttachment method handles the game's flow upon a <see cref="Bubble"/> attaches to the grid.
+        /// </summary>
+        /// <param name="attachedBubble">The <see cref="Bubble"/> instance that attached to the grid.</param>
+        /// <param name="position">The zero-based position of the bubble that attached to the grid.</param>
+        /// <param name="didPop">Whether the bubble popped a group upon attaching to the grid.</param>
+        /// <param name="popSize">The number of bubble pop.</param>
+        private void HandleBubbleAttachment(Bubble attachedBubble, Vector2Int position, bool didPop, List<HexagonCell> toPop)
+        {
+            if (!didPop)
+            {
+                Turret.i_missedShots++;
+                Turret.i_totalMissedShots++;
+            }
+
+            if (!didPop && position.y + 1 == Grid.RealHeight)
+            {
+                UnityEngine.Debug.Log("HandleBubbleAttachment");
+                ForceFinish();
+                return;
+            }
+
+            if (didPop)
+            {
+                if (!RCGSoundSetting.Instance.IsSoundMuted)
+                {
+                    RCGSoundSetting.Instance.PlaySFX(mergeAudioClip);
+                }
+
+                int bonus = (int)(toPop.Count / 2) - 1;
+                _score += toPop.Count * (10 + bonus * 5);
+            }
+
+            HandleBubbleTimeAddRow(0);
+            CheckForNewRow();
+
+            Pool.Recompute();
+            //Turret.Reload(Pool.PickBubble());
+            Turret.Reload(GetReloadColorBubble());
+        }
+
+        private void Update()
+        {
+            if (timeCountWhenShot != -1)
+            {
+                timeCountWhenShot += Time.deltaTime;
+
+                if (timeCountWhenShot > m_timeWithNoNewShot)
+                {
+                    timeCountWhenShot = 0;
+                    CheckForNewRow(true);
+                }
+            }
+        }
+
+        private void HandleBubbleTimeAddRow(float timeCountWhenShot)
+        {
+            this.timeCountWhenShot = timeCountWhenShot;
+        }
+
+        /// <summary>
+        /// The CheckForNewRow method checks if a new row should be added after a set amount of missed shots by the turret.
+        /// </summary>
+        private void CheckForNewRow(bool timeWithNoNewShot = false)
+        {
+            if ((Turret.i_missedShots == 0 || Turret.i_missedShots % m_missedShotsTillNewRow != 0)
+                && (Turret.i_Shots == 0 || Turret.i_Shots % m_shotsTillNewRow != 0) && !timeWithNoNewShot)
+                return;
+
+            if (Grid.AddRow())
+            {
+                Turret.i_missedShots = 0;
+                return;
+            }
+
+            ForceFinish();
+        }
+
+        private void ChangeRowGenerationCondition(int i)
+        {
+            m_shotsTillNewRow = Config.ShotsTillNewRow[i];
+            m_missedShotsTillNewRow = Config.MissedShotsTillNewRow[i];
+            m_timeWithNoNewShot = Config.TimeWithNoNewShot[i];
+        }
+
+        private void CheckIfAlert()
+        {
+            if (Grid.Height >= Grid.RealHeight - 2)
+            {
+                if (alertLineAnim.isPlaying) return;
+
+                alertLineAnim.gameObject.SetActive(true);
+                alertLineAnim.Play();
+                if (!RCGSoundSetting.Instance.IsSoundMuted)
+                {
+                    AudioSource source = alertLineAnim.gameObject.GetComponent<AudioSource>();
+                    source.clip = warningAudioClip[Random.Range(0, warningAudioClip.Count)];
+                    source.volume = RCGSoundSetting.Instance.CurrentSoundVolume;
+                    source.Play();
+                    Debug.Log("Alert");
+                }
+                return;
+            }
+
+            if (!alertLineAnim.isPlaying) return;
+
+            alertLineAnim.gameObject.GetComponent<AudioSource>().Stop();
+
+            alertLineAnim.Stop();
+            alertLineAnim.gameObject.SetActive(true);
+        }
+
+        /// <summary>
+        /// The CheckForEmptyGrid method checks if the grid is empty. If it is, the game will finish.
+        /// </summary>
+        private void CheckIfEndGame()
+        {
+            if (Grid.Height == 0)
+            {
+                UnityEngine.Debug.Log("CheckIfEndGame");
+                ForceFinish();
+            }
+        }
+
+        public void HandleSwap()
+        {
+            if (!RCGSoundSetting.Instance.IsSoundMuted)
+            {
+                RCGSoundSetting.Instance.PlaySFX(swapAudioClip);
+            }
+
+            Pool.Recompute();
+            //Turret.Swap(Pool.PickBubble(true), true);
+            Turret.Swap(GetReloadColorBubble(true), true);
+        }
+    }
+}

@@ -1,0 +1,20 @@
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+name: release-please
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          config-file: '.github/release-please/release-please-main-config.json'
+          target-branch: ${{ github.ref_name }}
+          token: ${{ secrets.MY_RELEASE_PLEASE_TOKEN }}

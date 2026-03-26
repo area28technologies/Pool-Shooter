@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4779a48d9dae7394d8121597ff6419e1, type: 3}
+  m_Name: BubbleLevelConfigSO
+  m_EditorClassIdentifier: 
+  _bubbleLevelConfig:
+    _bubbleColorProbability:
+    - 20
+    - 20
+    - 20
+    - 20
+    - 20
+    - 20
+    _maxMissedShotsTillNewRow: 5
+    _minMissedShotsTillNewRow: 2
+    _maxShotsTillNewRow: 10
+    _minShotsTillNewRow: 5
+    _maxTimeTillNewRow: 30
+    _minTimeTillNewRow: 10
+    _dropTimeTillNewRow: 1
+    _gridWidth: 9
+    _initialGridHeight: 7
+    _gridHeightThreshold: 20
+    _minimumBubbleNumber: 1
+    _maximumBubbleNumber: 6
+    _chanceToPopThreshold: 50

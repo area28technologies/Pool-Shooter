@@ -1,0 +1,104 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9620f8c34305754d8cc9a7e49e852d9, type: 3}
+  m_Name: Langaue_fil
+  m_EditorClassIdentifier: 
+  m_LocaleId:
+    m_Code: fil
+  m_SharedData: {fileID: 11400000, guid: 7a2a4cdf12cd0484685c44ca8fa3c007, type: 2}
+  m_Metadata:
+    m_Items: []
+  m_TableData:
+  - m_Id: 1976485011456
+    m_Localized: Paano maglaro
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7322649747456
+    m_Localized: Libreng Pagsasanay
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7762669985792
+    m_Localized: Ranggo Modus
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8027653529600
+    m_Localized: Mga setting
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8372366598144
+    m_Localized: Tunog
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8475764580352
+    m_Localized: Musika
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8573345062912
+    m_Localized: Kumpirmahin
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8729641607168
+    m_Localized: Tapos na ang laro
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8826878156800
+    m_Localized: Ang iyong marka ay naisumite na sa server.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 9166063132672
+    m_Localized: Lumabas sa Laro
+    m_Metadata:
+      m_Items: []
+  - m_Id: 9269112987648
+    m_Localized: Bumalik sa Menu
+    m_Metadata:
+      m_Items: []
+  - m_Id: 9428626563072
+    m_Localized: Nabigo ang pagsusumite ng marka sa server. Mangyaring kumuha ng
+      screenshot at makipag-ugnayan sa aming Customer Service.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 9688614690816
+    m_Localized: I-tap at i-drag para ilipat ang iyong shot. Bitawan para barilin.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 9809263845376
+    m_Localized: Magtutugma at mawawala ang 3 o higit pang orbs ng parehong uri.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 9880281800704
+    m_Localized: I-tap ang Swap button para ilipat ang aktibong shot.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10077762215936
+    m_Localized: Susunod
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10154727694336
+    m_Localized: Awto Ihulog Sa
+    m_Metadata:
+      m_Items: []
+  - m_Id: 259649088512000
+    m_Localized: Puntos
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16940992925696
+    m_Localized: Bumalik
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17900301553664
+    m_Localized: Nagtatapos ang laro kapag naabot ng mga orbs ang linyang ito.
+    m_Metadata:
+      m_Items: []
+  references:
+    version: 2
+    RefIds: []

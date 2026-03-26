@@ -1,0 +1,9 @@
+{
+  "packages": {
+    ".": {
+      "versioning": "always-bump-minor",
+      "release-type": "simple",
+      "draft-pull-request": true
+    }
+  }
+}

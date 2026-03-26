@@ -1,0 +1,21 @@
+name: Production Rollback
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        required: false
+        type: string
+      
+jobs:
+  promote-build:
+    uses: ./.github/workflows/promote.yml
+    secrets: inherit
+    with:
+      env: prod
+      buildName: BubbleShooter
+      s3Bucket: lt-deploy-production
+      s3BucketStaging: lt-deploy-staging
+      cache-key: E3HH1LQMPKBMNM
+      slack_channel: 'C08JFFFRXU4'
+      deployment_type: 'rollback'
+      manual_commit: ${{ inputs.commit }}
