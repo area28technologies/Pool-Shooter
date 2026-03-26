@@ -19,19 +19,12 @@ jobs:
     name: WebGL Build
     runs-on: ubuntu-latest
     steps:
-      - name: Free up disk space
-        run: |
-          echo "Freeing disk space before build"
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost
-          sudo docker system prune --all --force
-          df -h
-
       # Checkout
       - name: Checkout repository
         uses: actions/checkout@v4
         
       # Cache
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4  # v3 → v4로 업데이트
         with:
           path: Library
           key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
@@ -43,10 +36,7 @@ jobs:
           jq '.dependencies["com.a28.platform-sdk"] |= 
               "https://${{ secrets.MY_RELEASE_PLEASE_TOKEN }}@github.com/area28technologies/A28-platform-sdk.git#main"' \
               BubbleShooterEasterBunny/Packages/manifest.json > tmp.json && mv tmp.json BubbleShooterEasterBunny/Packages/manifest.json
-
-      - name: Ensure Unity cache directory exists
-        run: mkdir -p $HOME/.cache/unity3d
-
+            
       # Build
       - name: Build project
         uses: game-ci/unity-builder@v4
@@ -75,9 +65,8 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
-      # Return License
       - name: Return license
-        uses: game-ci/unity-return-license@v2
+        uses: game-ci/unity-return-license@v4
         if: always()
 
       - uses: actions/upload-artifact@v4
