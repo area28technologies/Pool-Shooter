@@ -43,7 +43,10 @@ jobs:
           jq '.dependencies["com.a28.platform-sdk"] |= 
               "https://${{ secrets.MY_RELEASE_PLEASE_TOKEN }}@github.com/area28technologies/A28-platform-sdk.git#main"' \
               BubbleShooterEasterBunny/Packages/manifest.json > tmp.json && mv tmp.json BubbleShooterEasterBunny/Packages/manifest.json
-            
+
+      - name: Ensure Unity cache directory exists
+        run: mkdir -p $HOME/.cache/unity3d
+
       # Build
       - name: Build project
         uses: game-ci/unity-builder@v4
