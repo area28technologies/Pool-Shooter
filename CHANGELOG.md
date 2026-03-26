@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/area28technologies/Pool-Shooter/compare/v1.3.0...v1.4.0) (2026-03-26)
+
+
+### Bug Fixes
+
+* add disk space cleanup step before build in build.yml ([b1a26c4](https://github.com/area28technologies/Pool-Shooter/commit/b1a26c48dd2aa0c10252ac883eaf6466bd7e97de))
+
 ## [1.3.0](https://github.com/area28technologies/GameReskin-BubbleShooter/compare/v1.2.0...v1.3.0) (2025-04-24)
 
 
