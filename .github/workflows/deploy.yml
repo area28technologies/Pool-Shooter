@@ -57,22 +57,24 @@ jobs:
       - name: Update Deployment Version
         if: success()
         run: |
-          # Download current deployment version file
-          aws s3 cp s3://${{ inputs.s3Bucket }}/archive/${{ inputs.buildName }}/deploymentVersion.json deploymentVersion.json
-          
+          # Download current deployment version file (create initial file if it doesn't exist)
+          if ! aws s3 cp s3://${{ inputs.s3Bucket }}/archive/${{ inputs.buildName }}/deploymentVersion.json deploymentVersion.json 2>/dev/null; then
+            echo '{"environments":{"staging":{"currentDeployment":{"commit":"","timestamp":""},"previousDeployment":{"commit":"","timestamp":""}},"production":{"currentDeployment":{"commit":"","timestamp":""},"previousDeployment":{"commit":"","timestamp":""}}}}' > deploymentVersion.json
+          fi
+
           # Read current deployment info
-          CURRENT_COMMIT=$(jq -r '.environments.staging.currentDeployment.commit' deploymentVersion.json)
-          CURRENT_TIMESTAMP=$(jq -r '.environments.staging.currentDeployment.timestamp' deploymentVersion.json)
+          CURRENT_COMMIT=$(jq -r '.environments.${{ inputs.env }}.currentDeployment.commit' deploymentVersion.json)
+          CURRENT_TIMESTAMP=$(jq -r '.environments.${{ inputs.env }}.currentDeployment.timestamp' deploymentVersion.json)
           
           # Update previous deployment with current values
           jq --arg commit "$CURRENT_COMMIT" --arg timestamp "$CURRENT_TIMESTAMP" \
-            '.environments.staging.previousDeployment.commit = $commit | .environments.staging.previousDeployment.timestamp = $timestamp' \
+            '.environments.${{ inputs.env }}.previousDeployment.commit = $commit | .environments.${{ inputs.env }}.previousDeployment.timestamp = $timestamp' \
             deploymentVersion.json > temp.json && mv temp.json deploymentVersion.json
-          
+
           # Update current deployment with new values
           CURRENT_TIME=$(date -u +"%Y-%m-%d %H:%M:%S")
           jq --arg commit "${{ github.sha }}" --arg timestamp "$CURRENT_TIME" \
-            '.environments.staging.currentDeployment.commit = $commit | .environments.staging.currentDeployment.timestamp = $timestamp' \
+            '.environments.${{ inputs.env }}.currentDeployment.commit = $commit | .environments.${{ inputs.env }}.currentDeployment.timestamp = $timestamp' \
             deploymentVersion.json > temp.json && mv temp.json deploymentVersion.json
           
           # Upload updated deployment version file

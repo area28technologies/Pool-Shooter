@@ -33,9 +33,7 @@ jobs:
 
       - name: Inject PAT into UPM URL
         run: |
-          jq '.dependencies["com.a28.platform-sdk"] |= 
-              "https://${{ secrets.MY_RELEASE_PLEASE_TOKEN }}@github.com/area28technologies/A28-platform-sdk.git#main"' \
-              BubbleShooterEasterBunny/Packages/manifest.json > tmp.json && mv tmp.json BubbleShooterEasterBunny/Packages/manifest.json
+          jq '.dependencies["com.a28.platform-sdk"]="https://${{ secrets.MY_RELEASE_PLEASE_TOKEN }}@github.com/area28technologies/A28-platform-sdk.git#main"' Packages/manifest.json > tmp.json && mv tmp.json Packages/manifest.json
             
       # Build
       - name: Build project
